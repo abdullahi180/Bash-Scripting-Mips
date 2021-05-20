@@ -1,0 +1,202 @@
+#!/bin/bash
+# script name : valsplit.sh
+
+
+
+
+
+function correctRegisterLayout {
+
+    # Aim in this function is to obtain the correct register format which should contain a number 0-9, start with the $ character and the register should not contain characters other than s or t.
+
+    echo $t1
+ 
+    
+    dollarSymbol=${1:0:1} # A layout of a register should contain a $ symbol
+
+    character=${1:1:1} # this should match character for example s or t 
+
+    number=${1:2:2} # The number we want to compare with is 1 so we have a base register layout $s1
+
+
+
+    if [ $dollarSymbol != $ ]; then #This is comparing the dollar sign with another dollar sign if there not equal
+
+        error=true #Then an error will occur
+
+        echo "Unrecognised symbol entered"
+
+
+  
+    
+    elif [[ $character == "s" ]]; then #s stands for a saved variable so will pass
+         
+
+         if [ $number -lt 0 ] || [ $number -gt 7 ]; then #The number cannot exceed the number 7.
+        error=true
+
+        echo "The register must refer to either an s character nor can the number exceed 7"
+        
+
+  fi
+
+
+    elif [[ $character == "t" ]]; then #This will pass as t is the character we are also searching for 
+
+         if [ $number -lt 0 ] || [ $number -gt 9 ]; then
+
+        error=true
+ 
+        echo "Incorrect register no. Temporary registers are numbered 0 to 9."
+    
+
+  fi
+
+
+    elif ! [[ $character == [a-z] ]]; then # If character is not within range of a-z then an error would occur
+
+        error=true
+        echo "The register must contain a letter from a-z"
+
+
+elif [[ $character == "z" ]]; then #Register chracter z should not be recognized
+      error=true 
+    
+      echo "Unrecognised register name z. Use s or t."
+
+    else
+        error=true
+
+        echo "Then the register is out of range and must contain s or t" # If the register entered doesnt apply to the above, then it is unreachable 
+
+  fi    
+}
+
+
+
+
+#function immediateChecker {
+
+    
+   # if  [[ $1 -lt -32768 || $1 -gt 32767 ]]; then  #If the paramteter passed is not within this range then an error as immediate out of bounds, this is a 16 bit (2 bytes) represenation of type short.
+       # error=true #Then theres an error. 
+      #  echo "Out of bounds immediate . Should be between -32768 and 32767."   #This is checking if it is greater than 32768, and less than -32768.
+    #fi  
+#}
+
+
+
+
+
+while read line; do
+     echo $line # This line will represent an instruction passed in. E.g. 'add $s0 $s1 $s2'.
+
+    array=($line) # ('add', '$s0', '$s1', '$s2')
+
+    operator=${array[0]} # This is will represent the operator e.g. add, sub, addi
+
+    error=false
+   
+
+
+    if [[ $operator =~ add|sub ]] && ! [[ ${operator:3:1} =~ [a-z] ]]; then #Cheching if operator is valid e.g. either sub or add in this case
+
+        echo "R Format" # The operator is a type R format instruction
+
+        registerLayout=(${array[1]} ${array[2]} ${array[3]}) # Creating an array for layout for the register such as ('$s0', '$s1', '$s2')
+
+        for i in "${registerLayout[@]}"; do
+            correctRegisterLayout $i # calling previous method so we don't need to reuse code, so we want the correct registers passed in with no error
+        done
+
+    
+    elif [[ $operator == addi ]]; then # Here we want our script to accept an immediate once passed in as a parameter E.g. addi $t3 $s0 -9
+        echo "I Format" # Immediates are type I format instruction
+
+        registerOnly=(${array[1]} ${array[2]}) # This will hold the first 2 registers and not the immediate
+
+        immediate=${array[3]} # This will contain the immediate positioned at index 3, after first 2 registers
+        
+        for i in "${registerOnly[@]}"; do
+             correctRegisterLayout $i
+        done
+
+
+
+
+
+if  [[ $immediate -lt -32768 || $immediate -gt 32767 ]]; then  #If the paramteter passed is not within this range then an error as immediate out of bounds, this is a 16 bit (2 bytes) represenation of type short.
+        error=true #Then theres an error. 
+        echo "Out of bounds immediate . Should be between -32768 and 32767."   #This is checking if it is greater than 32768, and less than -32768.
+    fi 
+
+
+
+
+        #immediateChecker $immediate
+
+    elif [[ $operator =~ lw|sw ]]; then # E.g. lw $s0 8($t2)
+        echo "I Format"
+
+        
+        reg1=${array[1]} # second position of array e.g. $s0
+
+        secondItem=${array[2]} # second entry index of array will contian base address and offset either store or load word 8($t0)
+
+        offset=${secondItem%(*} # 8
+
+        #echo $immediate
+
+       # immediateChecker $offset
+
+        reg2=${secondItem%)*} # 8($t2)
+
+        reg2=${reg2##*(} # this will hold the base address of $t2
+
+        iOffSetRegisters=($reg1 $reg2) #  for example: lw|sw $s0 8($t2) 
+
+
+if  [[ $offset -lt -32768 || $offset -gt 32767 ]]; then     
+        error=true 
+        echo "Out of bounds immediate . Should be between -32768 and 32767."   
+    fi 
+
+
+
+        
+
+     for i in "${iOffSetRegisters[@]}"; do
+            
+         correctRegisterLayout $i # follows register layout guideline from an earlier function
+        
+     done
+
+  
+ else
+
+         error=true # otherwise argument passed doesnt meet the requirements
+         echo "Incorrect instruction passed"    
+
+    fi
+
+
+
+  if [[ "$error" =  false ]]; then # error assigned either true or false
+
+         echo "Success"
+         echo $line >> $2 # This will append the valid instruction into the correct.txt file
+        
+    else
+
+         echo "Error"
+         echo $line >> $3 # This will append the invalid instructions into the incorrect.txt file
+   
+ fi
+    
+
+
+done
+
+
+
+

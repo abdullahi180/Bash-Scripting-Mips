@@ -1,0 +1,15 @@
+# correct . txt
+add $s0 $s1 $s2
+sub $s2 $t0 $t3
+lw $t1 8( $t2 )
+addi $t3 $s0 -9
+sw $s3 4( $t0 )
+
+
+
+lw $t1 10( $so )
+add $s0 $s1 $s2
+add $s0 $s1 $s2
+add $s0 $s1 $s2
+add $s1 $s2 $s3
+lw $t1 10( $s0 )
